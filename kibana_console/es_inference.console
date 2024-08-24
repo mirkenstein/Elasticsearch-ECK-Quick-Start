@@ -35,13 +35,21 @@ PUT _inference/text_embedding/hugging-face-embeddings
 {
   "service": "hugging_face",
   "service_settings": {
-    "api_key": "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",
+    "api_key": """${hf_token}""",
     "url": "http://"${inference_ip}":8081/embed"
+  }
+}
+PUT _inference/text_embedding/hugging-face-embeddings-gpu
+{
+  "service": "hugging_face",
+  "service_settings": {
+    "api_key": """${hf_token}""",
+    "url": "http://"${inference_ip}":8082/embed"
   }
 }
 # Test Inference Embedding Endpoint
 GET _inference
-POST _inference/text_embedding/hugging-face-embeddings
+POST _inference/text_embedding/hugging-face-embeddings-gpu
 {
   "input": "The sky above the port was the color of television tuned to a dead channel."
 }
@@ -52,7 +60,7 @@ PUT /my-index
     "properties": {
       "text": {
         "type": "semantic_text",
-        "inference_id": "hugging-face-embeddings"
+        "inference_id": "hugging-face-embeddings-gpu"
       }
     }
   }
@@ -71,7 +79,22 @@ POST /my-index/_search
     }
   }
 }
-
+###
+# Test Collection
+####
+DELETE collection-with-tei-embeddings
+PUT /collection-with-tei-embeddings
+{
+  "mappings": {
+    "properties": {
+      "text": {
+        "type": "semantic_text",
+        "inference_id": "hugging-face-embeddings-gpu"
+      }
+    }
+  }
+}
+GET collection-with-tei-embeddings/_count
 #DELETE _inference/completion/openai-completion
 PUT _inference/completion/openai-completion
 {
@@ -198,14 +221,30 @@ POST _reindex?wait_for_completion=false
     "pipeline": "my-elser-pipeline"
   }
 }
+###########################
+# Sparse Vectors Search
+##########################
 GET collection-with-sparse-embeddings/_search
+# .elser_model_2_linux-x86_64
+# "text_sparse_embedding.predicted_value"
+
+GET collection-with-sparse-embeddings/_search
+{
+  "query": {
+    "sparse_vector": {
+      "field": "text_sparse_embedding.predicted_value",
+      "inference_id": ".elser_model_2_linux-x86_64",
+      "query": "constellations in the northern hemisphere"
+    }
+  }
+}
 GET collection-with-sparse-embeddings/_count
 
 GET _cat/indices?v
 
 GET _cat/indices/collection*?v
 # DELETE _ingest/pipeline/text-embeddings
-
+##############
 # Dense Vector
 #############
 # https://www.elastic.co/guide/en/machine-learning/current/ml-nlp-text-emb-vector-search-example.html
@@ -272,14 +311,15 @@ POST _reindex?wait_for_completion=false
 ####
 GET collection-with-embeddings/_mapping
 GET collection-with-embeddings/_search
-
+ # "hugging-face-embeddings-gpu"
+ # "sentence-transformers__msmarco-minilm-l12-cos-v5"
 GET collection-with-embeddings/_search
 {
   "knn": {
     "field": "text_embedding.predicted_value",
     "query_vector_builder": {
       "text_embedding": {
-        "model_id": "sentence-transformers__msmarco-minilm-l12-cos-v5",
+        "model_id": "hugging-face-embeddings-gpu",
         "model_text": "How is the weather in Jamaica?"
       }
     },
@@ -291,6 +331,37 @@ GET collection-with-embeddings/_search
     "text"
   ]
 }
+GET collection-with-tei-embeddings/_mapping
+GET collection-with-tei-embeddings/_search
+# Nested query looking at Chunks
+########################
+GET collection-with-tei-embeddings/_search
+{
+      "query": {
+        "nested": {
+          "path": "text.inference.chunks",
+          "query": {
+            "knn": {
+              "field": "text.inference.chunks.embeddings",
+              "query_vector_builder": {
+                "text_embedding": {
+                  "model_id": "hugging-face-embeddings-gpu",
+                  "model_text": "How is the weather in Jamaica?"
+                }
+              }
+            }
+          },
+          "inner_hits": {
+            "size": 2,
+            "name": "collection-with-tei-embeddings.text",
+            "_source": [
+              "text.inference.chunks.text"
+            ]
+          }
+        }
+      }
+    }
+
 
 
 
