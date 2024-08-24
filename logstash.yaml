@@ -1,0 +1,76 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: logstash-keystore-pass
+stringData:
+  LOGSTASH_KEYSTORE_PASS: changed
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: logstash-secure-settings
+stringData:
+  HELLO: Hallo
+---
+apiVersion: logstash.k8s.elastic.co/v1alpha1
+kind: Logstash
+metadata:
+  name: quickstart
+spec:
+  count: 1
+  version: 8.14.3
+  elasticsearchRefs:
+    - clusterName: quickstart
+      name: quickstart
+  monitoring:
+    metrics:
+      elasticsearchRefs:
+        - name: quickstart
+    logs:
+      elasticsearchRefs:
+        - name: quickstart
+  pipelines:
+    - pipeline.id: main
+      config.string: |
+        input {
+          beats {
+            port => 5044
+          }
+        }
+        filter {
+          grok {
+            match => { "message" => "%{HTTPD_COMMONLOG}"}
+          }
+          geoip {
+            source => "[source][address]"
+            target => "[source]"
+          }
+        }
+        output {
+          stdout { codec => dots}
+         
+        }
+  secureSettings:
+    - secretName: logstash-secure-settings
+    - secretName: quickstart-es-elastic-user
+  podTemplate:
+    spec:
+      containers:
+        - name: logstash
+          env:
+            - name: LOGSTASH_KEYSTORE_PASS
+              valueFrom:
+                secretKeyRef:
+                  name: logstash-keystore-pass
+                  key: LOGSTASH_KEYSTORE_PASS
+  services:
+    - name: beats
+      service:
+        spec:
+          type: NodePort
+          ports:
+            - port: 5044
+              nodePort: 32044
+              name: "filebeat"
+              protocol: TCP
+              targetPort: 5044

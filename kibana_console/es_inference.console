@@ -1,0 +1,305 @@
+GET _cat/nodes?v
+GET _cat/indices/collection*?v
+
+################################
+# ML Models And Deployments
+###############################
+GET _cat/ml/trained_models?v
+GET _ml/trained_models/_all/_stats
+GET _ml/trained_models/_all/_stats?filter_path=**.model_id,**.deployment_id&format=yaml
+GET _ml/trained_models
+GET _ml/trained_models/.elser_model_2_linux-x86_64/deployment
+POST _ml/trained_models/.elser_model_2_linux-x86_64/deployment/_update
+{
+  "number_of_allocations": 3
+}
+# Test deployed Models
+POST _ml/trained_models/sentence-transformers__msmarco-minilm-l12-cos-v5/_infer
+{
+  "docs": {
+    "text_field": "How is the wheather in Jamaica?"
+  }
+}
+# Test deployed Models
+POST _ml/trained_models/.elser_model_2_linux-x86_64/_infer
+{
+  "docs": {
+    "text_field": "How is the wheather in Jamaica?"
+  }
+}
+###########################
+# Inference endpoints
+###########################
+DELETE _inference/text_embedding/hugging-face-embeddings
+PUT _inference/text_embedding/hugging-face-embeddings
+{
+  "service": "hugging_face",
+  "service_settings": {
+    "api_key": "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",
+    "url": "http://"${inference_ip}":8081/embed"
+  }
+}
+# Test Inference Embedding Endpoint
+GET _inference
+POST _inference/text_embedding/hugging-face-embeddings
+{
+  "input": "The sky above the port was the color of television tuned to a dead channel."
+}
+DELETE my-index
+PUT /my-index
+{
+  "mappings": {
+    "properties": {
+      "text": {
+        "type": "semantic_text",
+        "inference_id": "hugging-face-embeddings"
+      }
+    }
+  }
+}
+POST /my-index/_doc
+{
+  "text": "There are a few foods and food groups that will help to fight inflammation and delayed onset muscle soreness (both things that are inevitable after a long, hard workout) when you incorporate them into your postworkout eats, whether immediately after your run or at a meal later in the day"
+}
+POST /my-index/_search
+{
+  "size" : 3,
+  "query" : {
+    "semantic": {
+      "field": "text",
+      "query": "How to avoid muscle soreness while running?"
+    }
+  }
+}
+
+#DELETE _inference/completion/openai-completion
+PUT _inference/completion/openai-completion
+{
+    "service": "openai",
+    "service_settings": {
+        "api_key": "<api_key>",
+        "model_id": "meta-llama/Meta-Llama-3.1-8B-Instruct",
+        "url": "http://"${inference_ip}":8080/v1/chat/completions"
+    }
+}
+
+POST _inference/completion/openai-completion
+{
+  "input": "Tell me a joke?"
+}
+
+
+
+
+
+GET _inference
+###############################
+# Pipelines For Search
+#############################
+PUT /_ingest/pipeline/my-embed-search-pipeline
+{
+  "processors": [
+    {
+      "inference": {
+        "model_id": "sentence-transformers__msmarco-minilm-l12-cos-v5",
+        "input_output": [
+          {
+            "input_field": "text",
+            "output_field": "text_embedding"
+          }
+        ]
+      }
+    }
+  ]
+}
+# Tasls
+#   "task": "g8v1-55sRRWCJ1pUT-dR6w:3279244"
+GET _tasks
+GET _tasks/WsDIIZ9ZSy21DE3W9ZCutA:144
+POST _tasks/WsDIIZ9ZSy21DE3W9ZCutA:144/_cancel
+DELETE _ingest/pipeline/my-elser-pipeline
+PUT _ingest/pipeline/my-elser-pipeline
+{
+  "processors": [
+    {
+      "inference": {
+        "model_id": ".elser_model_2_linux-x86_64",
+        "input_output": [
+          {
+            "input_field": "text",
+            "output_field": "text_sparse_embedding.predicted_value"
+          }
+        ]
+      }
+    }
+  ],
+  "on_failure": [
+    {
+      "set": {
+        "description": "Index document to 'failed-<index>'",
+        "field": "_index",
+        "value": "failed-{{{_index}}}"
+      }
+    },
+    {
+      "set": {
+        "description": "Set error message",
+        "field": "ingest.failure",
+        "value": "{{_ingest.on_failure_message}}"
+      }
+    }
+  ]
+}
+# Create collection with Sparse Embeddings
+DELETE collection-with-sparse-embeddings
+
+PUT collection-with-sparse-embeddings
+{
+  "mappings": {
+    "properties": {
+      "text_sparse_embedding.predicted_value": {
+        "type": "sparse_vector"
+      },
+      "text": {
+        "type": "text"
+      }
+    }
+  },
+  "settings": {"number_of_shards": 3}
+}
+
+GET collection-with-sparse-embeddings/_mapping
+#  Test Range Query for source index
+GET collection/_count
+{
+  "query": {
+    "range": {
+      "id": {
+        "lte": 20000
+      }
+    }
+  }
+}
+POST _reindex?wait_for_completion=false
+{
+  "source": {
+    "index": "collection"
+    ,  "query": {
+    "range": {
+      "id": {
+        "gte": 0
+      }
+    }
+  }
+
+  },
+  "dest": {
+    "index": "collection-with-sparse-embeddings",
+    "pipeline": "my-elser-pipeline"
+  }
+}
+GET collection-with-sparse-embeddings/_search
+GET collection-with-sparse-embeddings/_count
+
+GET _cat/indices?v
+
+GET _cat/indices/collection*?v
+# DELETE _ingest/pipeline/text-embeddings
+
+# Dense Vector
+#############
+# https://www.elastic.co/guide/en/machine-learning/current/ml-nlp-text-emb-vector-search-example.html
+GET _ingest/pipeline/text-embeddings
+PUT _ingest/pipeline/text-embeddings
+{
+  "description": "Text embedding pipeline",
+  "processors": [
+    {
+      "inference": {
+        "model_id": "sentence-transformers__msmarco-minilm-l12-cos-v5",
+        "target_field": "text_embedding",
+        "field_map": {
+          "text": "text_field"
+        }
+      }
+    }
+  ],
+  "on_failure": [
+    {
+      "set": {
+        "description": "Index document to 'failed-<index>'",
+        "field": "_index",
+        "value": "failed-{{{_index}}}"
+      }
+    },
+    {
+      "set": {
+        "description": "Set error message",
+        "field": "ingest.failure",
+        "value": "{{_ingest.on_failure_message}}"
+      }
+    }
+  ]
+}
+
+
+
+PUT collection-with-embeddings
+{
+  "mappings": {
+    "properties": {
+      "text_embedding.predicted_value": {
+        "type": "dense_vector"
+      },
+      "text": {
+        "type": "text"
+      }
+    }
+  }
+}
+
+POST _reindex?wait_for_completion=false
+{
+  "source": {
+    "index": "collection"
+  },
+  "dest": {
+    "index": "collection-with-embeddings",
+    "pipeline": "text-embeddings"
+  }
+}
+
+####
+GET collection-with-embeddings/_mapping
+GET collection-with-embeddings/_search
+
+GET collection-with-embeddings/_search
+{
+  "knn": {
+    "field": "text_embedding.predicted_value",
+    "query_vector_builder": {
+      "text_embedding": {
+        "model_id": "sentence-transformers__msmarco-minilm-l12-cos-v5",
+        "model_text": "How is the weather in Jamaica?"
+      }
+    },
+    "k": 10,
+    "num_candidates": 100
+  },
+  "_source": [
+    "id",
+    "text"
+  ]
+}
+
+
+
+# Update index Settings to use pipeline for search
+###########
+GET collection-with-embeddings/_settings
+PUT collection-with-embeddings/_settings
+{
+  "index": {
+    "default_pipeline": "my-embed-search-pipeline"
+  }
+}
