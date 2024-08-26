@@ -1,4 +1,4 @@
-# Minikube Seti[]
+# Minikube Setitings
 
 
 ```shell
