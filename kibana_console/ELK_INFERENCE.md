@@ -120,7 +120,7 @@ GET collection-with-embeddings/_search
 
 https://www.elastic.co/search-labs/blog/elasticsearch-sparse-vector-query
 
-See also the ELSE code example in  Elastic's [Semantic search](https://www.elastic.co/guide/en/elasticsearch/reference/current/semantic-search.html)
+See also the ELSER code example in  Elastic's [Semantic search](https://www.elastic.co/guide/en/elasticsearch/reference/current/semantic-search.html)
 documentation.
 ```shell
 GET collection-with-sparse-embeddings/_search
