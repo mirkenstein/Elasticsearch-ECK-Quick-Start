@@ -114,6 +114,27 @@ GET collection-with-embeddings/_search
 }
 ```
 
+# Sparse Vector Search 
+[Sparse Vector Field Type ](https://www.elastic.co/guide/en/elasticsearch/reference/current/sparse-vector.html)
+
+
+https://www.elastic.co/search-labs/blog/elasticsearch-sparse-vector-query
+
+See also the ELSE code example in  Elastic's [Semantic search](https://www.elastic.co/guide/en/elasticsearch/reference/current/semantic-search.html)
+documentation.
+```shell
+GET collection-with-sparse-embeddings/_search
+{
+  "query": {
+    "sparse_vector": {
+      "field": "text_sparse_embedding.predicted_value",
+      "inference_id": ".elser_model_2_linux-x86_64",
+      "query": "constellations in the northern hemisphere"
+    }
+  }
+}
+```
+
 # Dense Vector Search (k-nearest neighbor (kNN) search)
 [Parameters for dense vector fields](https://www.elastic.co/guide/en/elasticsearch/reference/current/dense-vector.html)
 
@@ -194,26 +215,6 @@ POST product-index/_search
 ```
 
 
-# Sparse Vector Search 
-[Sparse Vector Field Type ](https://www.elastic.co/guide/en/elasticsearch/reference/current/sparse-vector.html)
-
-
-https://www.elastic.co/search-labs/blog/elasticsearch-sparse-vector-query
-
-See also the ELSE code example in  Elastic's [Semantic search](https://www.elastic.co/guide/en/elasticsearch/reference/current/semantic-search.html)
-documentation.
-```shell
-GET collection-with-sparse-embeddings/_search
-{
-  "query": {
-    "sparse_vector": {
-      "field": "text_sparse_embedding.predicted_value",
-      "inference_id": ".elser_model_2_linux-x86_64",
-      "query": "constellations in the northern hemisphere"
-    }
-  }
-}
-```
 
 
  
