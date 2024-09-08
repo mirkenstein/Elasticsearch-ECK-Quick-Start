@@ -1,0 +1,129 @@
+###########################
+# Inference endpoints
+###########################
+
+#Open AI
+# --------------------------------------
+PUT _inference/text_embedding/openai-embeddings
+{
+    "service": "openai",
+    "service_settings": {
+        "api_key": "${OPEN_AI_API_KEY}",
+        "model_id": "text-embedding-ada-002"
+    }
+}
+
+
+PUT _inference/completion/openai-completion-gpt-3.5-turbo
+{
+    "service": "openai",
+    "service_settings": {
+        "api_key": "${OPEN_AI_API_KEY}",
+        "model_id": "gpt-3.5-turbo"
+    }
+}
+
+# Kohere
+# ----------------
+
+PUT _inference/text_embedding/cohere-embeddings
+{
+    "service": "cohere",
+    "service_settings": {
+        "api_key": "${KOHERE_API_KEY}",
+        "model_id": "embed-english-light-v3.0",
+        "embedding_type": "byte"
+    }
+}
+
+
+PUT _inference/rerank/cohere-rerank
+{
+  "service": "cohere",
+  "service_settings": {
+    "api_key": "${KOHERE_API_KEY}",
+    "model_id": "rerank-english-v3.0"
+  },
+  "task_settings": {
+    "top_n": 10,
+    "return_documents": true
+  }
+}
+
+# Anthropic
+# -----------------
+
+PUT _inference/completion/anthropic_completion_claude-3-5-sonne
+{
+    "service": "anthropic",
+    "service_settings": {
+        "api_key": "${ANTHROPIC_API_KEY}",
+        "model_id": "claude-3-5-sonnet-20240620"
+    },
+    "task_settings": {
+        "max_tokens": 1024
+    }
+}
+###############################33
+# TEST LLMs
+# -------------------------------
+# anthropic_completion_claude-3-5-sonne
+# openai-completion
+# openai-completion-gpt-3.5-turbo
+POST _inference/completion/openai-completion-gpt-3.5-turbo
+{
+  "input": "Tell me a joke?"
+}
+
+DELETE _inference/text_embedding/hugging-face-embeddings
+PUT _inference/text_embedding/hugging-face-embeddings
+{
+  "service": "hugging_face",
+  "service_settings": {
+    "api_key": """${hf_token}""",
+    "url": "http://"${inference_ip}":8081/embed"
+  }
+}
+PUT _inference/text_embedding/hugging-face-embeddings-gpu
+{
+  "service": "hugging_face",
+  "service_settings": {
+    "api_key": """${hf_token}""",
+    "url": "http://"${inference_ip}":8082/embed"
+  }
+}
+# Test Inference Embedding Endpoint
+GET _inference
+# openai-embeddings
+# hugging-face-embeddings-gpu
+#cohere-embeddings
+POST _inference/text_embedding/openai-embeddings
+{
+  "input": "The sky above the port was the color of television tuned to a dead channel."
+}
+DELETE my-index
+PUT /my-index
+{
+  "mappings": {
+    "properties": {
+      "text": {
+        "type": "semantic_text",
+        "inference_id": "hugging-face-embeddings-gpu"
+      }
+    }
+  }
+}
+POST /my-index/_doc
+{
+  "text": "There are a few foods and food groups that will help to fight inflammation and delayed onset muscle soreness (both things that are inevitable after a long, hard workout) when you incorporate them into your postworkout eats, whether immediately after your run or at a meal later in the day"
+}
+POST /my-index/_search
+{
+  "size" : 3,
+  "query" : {
+    "semantic": {
+      "field": "text",
+      "query": "How to avoid muscle soreness while running?"
+    }
+  }
+}

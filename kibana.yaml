@@ -3,7 +3,7 @@ kind: Kibana
 metadata:
   name: quickstart
 spec:
-  version: 8.15.0
+  version: 8.15.1
   http:
     service:
       spec:
@@ -11,6 +11,11 @@ spec:
   count: 1
   elasticsearchRef:
     name: quickstart
+  enterpriseSearchRef:
+    name: enterprise-search-quickstart
+#  confid:
+#    enterpriseSearch:
+#      host: 'https://enterprise-search-quickstart-ent-http.elk.svc:3002'
   monitoring:
     metrics:
       elasticsearchRefs:
