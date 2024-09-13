@@ -5,8 +5,14 @@
 minikube config set memory 65536
 minikube config set cpus 16
 minikube service │ quickstart-es-http   --url -n elk
+````
+
+```shell
 minikube service  quickstart-es-http  --url --namespace elk
-``` 
+```
+```shell
+minikube service  quickstart-kb-http  --url --namespace elk
+```
 
 ```shell
 minikube config set memory 65536
@@ -49,7 +55,7 @@ kubectl config view --minify | grep namespace:
 ```
 
 ```shell
-kubectl get secret quickstart-es-elastic-user -o go-template='{{.data.elastic | base64decode }}
+kubectl get secret quickstart-es-elastic-user -o go-template='{{.data.elastic | base64decode }}'
 ```
 
 - Node Port 
