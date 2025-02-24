@@ -1,0 +1,43 @@
+################################
+# ML Models And Deployments
+###############################
+GET _cat/ml/trained_models?v
+#
+#id                                               heap_size operations create_time              type       ingest.pipelines data_frame.id
+#lang_ident_model_1                               1mb       39629      2019-12-05T12:28:34.594Z lang_ident 0                __none__
+#sentence-transformers__msmarco-minilm-l12-cos-v5 0b        0          2025-02-22T19:25:58.863Z pytorch    0                __none__
+
+GET _ml/trained_models/_all/_stats
+GET _ml/trained_models/_all/_stats?filter_path=**.model_id,**.deployment_id&format=yaml
+GET _ml/trained_models
+GET _ml/trained_models/.elser_model_2_linux-x86_64/deployment
+POST _ml/trained_models/.elser_model_2_linux-x86_64/deployment/_update
+{
+  "number_of_allocations": 1
+}
+
+
+# Start the downloaded model
+# sentence-transformers__msmarco-minilm-l12-cos-v5
+# maarsen__setfit-absa-paraphrase-mpnet-base-v2-restaurants-aspect
+# arsen__setfit-absa-paraphrase-mpnet-base-v2-restaurants-polarity
+# cross-encoder__nli-roberta-base
+# typeform__distilbert-base-uncased-mnli
+# distilbert__distilbert-base-uncased-finetuned-sst-2-english
+POST _ml/trained_models/distilbert__distilbert-base-uncased-finetuned-sst-2-english/deployment/_start
+{
+  "number_of_allocations":1,
+    "adaptive_allocations": {
+    "enabled": false
+
+  }
+}
+# Stop the downloaded model
+# sentence-transformers__msmarco-minilm-l12-cos-v5
+# maarsen__setfit-absa-paraphrase-mpnet-base-v2-restaurants-aspect
+# tomaarsen/setfit-absa-paraphrase-mpnet-base-v2-restaurants-polarity
+# arsen__setfit-absa-paraphrase-mpnet-base-v2-restaurants-polarity
+# cross-encoder__nli-roberta-base
+# typeform__distilbert-base-uncased-mnli
+# distilbert__distilbert-base-uncased-finetuned-sst-2-english
+POST _ml/trained_models/distilbert__distilbert-base-uncased-finetuned-sst-2-english_ingest/deployment/_stop
