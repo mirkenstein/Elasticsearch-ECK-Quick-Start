@@ -41,6 +41,10 @@ minikube delete
 
 ```
 
+## Minikube commands
+```shell
+ minikube service  --all  --url --namespace elk
+```
 # Quickstart Elastic ECK
 https://www.elastic.co/guide/en/cloud-on-k8s/current/k8s-deploy-eck.html
 
@@ -64,13 +68,42 @@ https://www.elastic.co/guide/en/cloud-on-k8s/master/k8s-services.html#k8s-allow-
 - Mlock
 https://www.elastic.co/guide/en/cloud-on-k8s/master/k8s-virtual-memory.html
 
+# Delete Resources
+```shell
+kubectl delete -f kibana.yaml
+kubectl delete -f ent-search.yaml
+kubectl delete -f es-nodes.yaml   
+kubectl delete -f start-trial.yaml 
 
+```
+- ES User pass
+```shell
+kubectl create secret generic quickstart-es-elastic-user --from-literal=elastic=$ECK_ES_PASS
+kubectl apply -f start-trial.yaml 
+```
+- Add minio secrets
+```shell
+kubectl create secret generic minio-credentials \
+--from-literal=s3.client.default.access_key=$minio_access_key \
+--from-literal=s3.client.default.secret_key=$minio_secret_key
+```
+### Create 
+```shell
+kubectl apply -f es-nodes.yaml 
+kubectl apply  -f kibana.yaml
+```
+## Start Trial in Dev Console
+```shell
+GET _license/trial_status
+POST _license/start_trial?acknowledge=true
+```
 ```shell
 es_url_http=$(minikube service  quickstart-es-http  --url --namespace elk )
-es_url= https${es_url_http#http} 
+es_url=`https${es_url_http#http} `
 es_pass=$(kubectl get secret quickstart-es-elastic-user -o go-template='{{.data.elastic | base64decode }}' --namespace elk)
 ```
 # Eland Import Models
+See also https://www.elastic.co/guide/en/machine-learning/current/ml-nlp-text-emb-vector-search-example.html
 https://www.elastic.co/guide/en/machine-learning/current/ml-nlp-import-model.html
 ```shell
 eland_import_hub_model \
@@ -79,8 +112,39 @@ eland_import_hub_model \
 --hub-model-id sentence-transformers/msmarco-MiniLM-L12-cos-v5 \
 --task-type text_embedding \
 --insecure
+```
+# Check available models
+```shell
+GET _cat/ml/trained_models?v
+#
+#id                                               heap_size operations create_time              type       ingest.pipelines data_frame.id
+#lang_ident_model_1                               1mb       39629      2019-12-05T12:28:34.594Z lang_ident 0                __none__
+#sentence-transformers__msmarco-minilm-l12-cos-v5 0b        0          2025-02-22T19:25:58.863Z pytorch    0                __none__
+```
+Or this one 
+```shell
+GET _ml/trained_models/_all/_stats
+GET _ml/trained_models/_all/_stats?filter_path=**.model_id,**.deployment_id&format=yaml
+```
+# Start the downloaded model
+```shell
+POST _ml/trained_models/sentence-transformers__msmarco-minilm-l12-cos-v5/deployment/_start
+{
+  "number_of_allocations": 3
+}
+```
 
-
+### Test deployed Models
+```shell
+POST _ml/trained_models/sentence-transformers__msmarco-minilm-l12-cos-v5/_infer
+{
+  "docs": {
+    "text_field": "How is the wheather in Jamaica?"
+  }
+}
+```
+# Other models
+```shell
 eland_import_hub_model \
 --url es_url \
 -u elastic -p $es_pass \
@@ -153,4 +217,60 @@ options:
 
 ```
 
+# ABSA Model Deployment
 
+### Topic
+```shell
+model_id="tomaarsen/setfit-absa-paraphrase-mpnet-base-v2-restaurants-aspect"
+#model_id="yangheng/deberta-v3-large-absa-v1.1"
+#model_id="absa/classifier-rest-0.2"
+task_type="text_classification"
+
+eland_import_hub_model \
+--url $es_url \
+-u elastic -p $es_pass \
+--hub-model-id $model_id \
+--task-type $task_type \
+--insecure  
+```
+### Sentiment
+```shell
+model_id="tomaarsen/setfit-absa-paraphrase-mpnet-base-v2-restaurants-polarity" 
+task_type="text_classification"
+
+eland_import_hub_model \
+--url $es_url \
+-u elastic -p $es_pass \
+--hub-model-id $model_id \
+--task-type $task_type \
+--insecure
+```
+
+# Use this one- NLI Roberta
+```shell
+
+#model_id="cross-encoder/nli-roberta-base"
+model_id="typeform/distilbert-base-uncased-mnli"
+task_type="zero_shot_classification"
+
+eland_import_hub_model \
+--url $es_url \
+-u elastic -p $es_pass \
+--hub-model-id $model_id \
+--task-type $task_type \
+--insecure  
+```         
+
+### Sentiment 
+```shell
+
+model_id="distilbert/distilbert-base-uncased-finetuned-sst-2-english"
+task_type="text_classification"
+
+eland_import_hub_model \
+--url $es_url \
+-u elastic -p $es_pass \
+--hub-model-id $model_id \
+--task-type $task_type \
+--insecure  
+```     

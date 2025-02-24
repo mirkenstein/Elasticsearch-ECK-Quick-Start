@@ -1,0 +1,277 @@
+
+GET gw-revenue1-surgery-pohist/_search
+################################
+# ML Models And Deployments
+###############################
+GET _cat/ml/trained_models?v
+#
+#id                                               heap_size operations create_time              type       ingest.pipelines data_frame.id
+#lang_ident_model_1                               1mb       39629      2019-12-05T12:28:34.594Z lang_ident 0                __none__
+#sentence-transformers__msmarco-minilm-l12-cos-v5 0b        0          2025-02-22T19:25:58.863Z pytorch    0                __none__
+
+GET _ml/trained_models/_all/_stats
+GET _ml/trained_models/_all/_stats?filter_path=**.model_id,**.deployment_id&format=yaml
+GET _ml/trained_models
+GET _ml/trained_models/.elser_model_2_linux-x86_64/deployment
+POST _ml/trained_models/.elser_model_2_linux-x86_64/deployment/_update
+{
+  "number_of_allocations": 1
+}
+
+
+# Start the downloaded model
+# sentence-transformers__msmarco-minilm-l12-cos-v5
+# maarsen__setfit-absa-paraphrase-mpnet-base-v2-restaurants-aspect
+# arsen__setfit-absa-paraphrase-mpnet-base-v2-restaurants-polarity
+# cross-encoder__nli-roberta-base
+# typeform__distilbert-base-uncased-mnli
+# distilbert__distilbert-base-uncased-finetuned-sst-2-english
+POST _ml/trained_models/distilbert__distilbert-base-uncased-finetuned-sst-2-english/deployment/_start
+{
+  "number_of_allocations":1,
+    "adaptive_allocations": {
+    "enabled": false
+
+  }
+}
+# Stop the downloaded model
+# sentence-transformers__msmarco-minilm-l12-cos-v5
+# maarsen__setfit-absa-paraphrase-mpnet-base-v2-restaurants-aspect
+# tomaarsen/setfit-absa-paraphrase-mpnet-base-v2-restaurants-polarity
+# arsen__setfit-absa-paraphrase-mpnet-base-v2-restaurants-polarity
+# cross-encoder__nli-roberta-base
+# typeform__distilbert-base-uncased-mnli
+# distilbert__distilbert-base-uncased-finetuned-sst-2-english
+POST _ml/trained_models/distilbert__distilbert-base-uncased-finetuned-sst-2-english_ingest/deployment/_stop
+
+
+
+# Test deployed Models
+# sentence-transformers__msmarco-minilm-l12-cos-v5
+# maarsen__setfit-absa-paraphrase-mpnet-base-v2-restaurants-aspect
+#
+POST _ml/trained_models/maarsen__setfit-absa-paraphrase-mpnet-base-v2-restaurants-aspect/_infer
+{
+  "docs": [
+    {"text_field":"The food was great, but the venue is just way too busy."},
+    {
+      "text_field": "Best pizza outside of Italy and really tasty"
+    },
+    {
+      "text_field": "The food variations are great and the prices are absolutely fair."
+    },
+    {
+      "text_field": "Unfortunately, you have to expect some waiting time and get a note with a waiting number if it should be very full."
+    }
+  ],
+  "inference_config": {
+    "text_classification": {
+      "classification_labels": [
+        "food",
+        "service"
+      ]
+    }
+  }
+}
+# Polarity
+POST _ml/trained_models/arsen__setfit-absa-paraphrase-mpnet-base-v2-restaurants-polarity/_infer
+{
+  "docs": [
+    {
+      "text_field": "The food was great, but the venue is just way too busy."
+    },
+    {
+      "text_field": "Best pizza outside of Italy and really tasty"
+    },
+    {
+      "text_field": "The food variations are great and the prices are absolutely fair."
+    },
+    {
+      "text_field": "Unfortunately, you have to expect some waiting time and get a note with a waiting number if it should be very full."
+    }
+  ]
+}
+
+# Zero Shot Classification
+#   "labels": ["SPORTS", "BUSINESS", "LOCAL", "ENTERTAINMENT"]
+POST _ml/trained_models/typeform__distilbert-base-uncased-mnli/_infer
+{
+    "docs": [{"text_field": "The S&P 500 gained a meager 12 points in the day’s trading. Trade volumes remain consistent with those of the past week while investors await word from the Fed about possible rate increases."}],
+    "inference_config": {
+        "zero_shot_classification": {
+            "labels": ["Stocks", "Market", "Bonds", "Options"]
+        }
+    }
+}
+POST _ml/trained_models/typeform__distilbert-base-uncased-mnli/_infer
+{
+  "docs": [
+    {
+      "text_field": "The food variations are great and the prices are absolutely fair."
+    },
+    {
+      "text_field": "The food variations are great but it is  very expensive."
+    },
+    {
+      "text_field": "The food was great, but the venue is just way too busy."
+    },
+    {
+      "text_field": "Best pizza outside of Italy and really tasty"
+    },
+    {
+      "text_field": "Unfortunately, you have to expect some waiting time and get a note with a waiting number if it should be very full."
+    }
+  ],
+  "inference_config": {
+    "zero_shot_classification": {
+      "labels": [
+        "Service",
+        "Food",
+        "Venue",
+        "Wait",
+        "Price"
+      ]
+    }
+  }
+}
+
+# DH
+POST _ml/trained_models/typeform__distilbert-base-uncased-mnli/_infer
+{
+  "docs": [
+      {"text_field" : "Sign on was okay. Tried to link device. Fail."},
+    {
+      "text_field": "Impossible to use, this app crashes right when you get to the section that asks you questions. I've tried two different devices with the same result on each. Update, the related issue was fixed so I've updated my rating. This app still needs a better user experience, so 3 stars now."
+    },{"text_field":"Anthem emailed me to have me sign up for this to 'assess' my 'COVID-19 symptoms'. First attempt at registering, it hangs at password entry. Tried a dozen times, gave up, and tried several hours later. Now I just never even receive a 1-time code to progress far enough to enter a password. Maybe do not push your app on people until you get the infrastructure in place to support the surge?"}
+  ],
+  "inference_config": {
+    "zero_shot_classification": {
+      "labels": [
+        "Support",
+        "Utility",
+        "Interface",
+        "Login and Signup",
+        "Experience"
+      ]
+    }
+  }
+}
+
+# Sentiment
+POST _ml/trained_models/distilbert__distilbert-base-uncased-finetuned-sst-2-english/_infer
+{
+  "docs": [
+    {"text_field" : "Sign on was okay. Tried to link device. Fail."},
+    {
+      "text_field": "Impossible to use, this app crashes right when you get to the section that asks you questions. I've tried two different devices with the same result on each. Update, the related issue was fixed so I've updated my rating. This app still needs a better user experience, so 3 stars now."
+    },
+    {
+      "text_field": "Anthem emailed me to have me sign up for this to 'assess' my 'COVID-19 symptoms'. First attempt at registering, it hangs at password entry. Tried a dozen times, gave up, and tried several hours later. Now I just never even receive a 1-time code to progress far enough to enter a password. Maybe do not push your app on people until you get the infrastructure in place to support the surge?"
+    }
+  ]
+}
+## Inference Pipeline
+DELETE _ingest/pipeline/text-classification
+PUT _ingest/pipeline/text-classification
+{
+  "description": "Text Topic and Sentiment pipeline",
+  "processors": [
+    {
+      "inference": {
+        "model_id": "typeform__distilbert-base-uncased-mnli",
+        "target_field": "text_class",
+        "field_map": {
+          "text": "text_field"
+        },
+        "inference_config": {
+          "zero_shot_classification": {
+            "labels": [
+              "Support",
+              "Interface",
+              "Login and Signup",
+              "Experience",
+              "Utility"
+            ]
+          }
+        }
+      }
+    },
+    {
+      "inference": {
+        "model_id": "distilbert__distilbert-base-uncased-finetuned-sst-2-english",
+        "target_field": "text_sentiment",
+        "inference_config": {
+          "text_classification": {}
+        },
+        "field_map": {
+          "text": "text_field"
+        }
+      }
+    }
+  ],
+  "on_failure": [
+    {
+      "set": {
+        "description": "Index document to 'failed-<index>'",
+        "field": "_index",
+        "value": "failed-{{{_index}}}"
+      }
+    },
+    {
+      "set": {
+        "description": "Set error message",
+        "field": "ingest.failure",
+        "value": "{{_ingest.on_failure_message}}"
+      }
+    }
+  ]
+}
+
+## Simulate Test Pipeline
+POST _ingest/pipeline/text-classification/_simulate
+{
+  "docs": [
+    {
+      "_source": {
+        "text":  "Sign on was okay. Tried to link device. Fail."
+      }
+    }
+  ]
+}
+
+# REINDEX WITH PIPELINE
+ # "com.anthem.sydney"
+ # "com.teladoc.members"
+GET ux-dh-postprocess/_search
+{
+  "_source": ["text","appId","appName","date","categories"],
+
+  "query": {
+    "term": {
+      "appId.keyword": "com.*"
+    }
+  }
+}
+####
+
+POST _reindex?wait_for_completion=false
+{
+  "source": {
+    "index": "ux-dh-postprocess",
+     "_source": ["text","appId","appName","date","categories"],
+    "query": {
+      "term": {
+        "appId.keyword": "com.*"
+      }
+    }
+  },
+  "dest": {
+    "index": "dest-sentiment-piptest",
+    "pipeline": "text-classification"
+  }
+}
+GET _tasks/gaCK0jGOTl-i7G6W4VAt-A:3220284
+
+DELETE dest-sentiment-piptest
+GET dest-sentiment-piptest/_count
+GET dest-sentiment-piptest/_search

@@ -3,13 +3,15 @@ kind: Elasticsearch
 metadata:
   name: quickstart
 spec:
-  version: 8.15.1
+  version: 8.17.2
+  secureSettings:
+    - secretName: minio-credentials
   http:
     service:
       spec:
         type: NodePort
   nodeSets:
-  - name: default
+  - name: dataml
     count: 3
     config:
 #      bootstrap.memory_lock: true
@@ -37,7 +39,7 @@ spec:
             - ReadWriteOnce
           resources:
             requests:
-              storage: 5Gi
+              storage: 6Gi
           storageClassName: standard
   monitoring:
     metrics:
