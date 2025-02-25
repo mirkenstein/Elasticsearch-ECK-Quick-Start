@@ -6,15 +6,15 @@ es_url=https${es_http#http}
 es_pass=$(kubectl get secret quickstart-es-elastic-user -o go-template='{{.data.elastic | base64decode }}' --namespace elk)
 ```
 
-
 2. Eland Import Models
-We will use the eland client utility from elastic to load models into our cluster.
+
+3. We will use the eland client utility from elastic to load models into our cluster.
 https://www.elastic.co/guide/en/machine-learning/current/ml-nlp-import-model.html
 
 
 See this blogpost for detailed step by step on the process https://www.elastic.co/guide/en/machine-learning/current/ml-nlp-text-emb-vector-search-example.html
 
-###  Zero Shot Classification
+- Zero Shot Classification
 We will use [typeform/distilbert-base-uncased-mnli](https://huggingface.co/typeform/distilbert-base-uncased-mnli)
 ```shell
 model_id="typeform/distilbert-base-uncased-mnli"
@@ -28,7 +28,9 @@ eland_import_hub_model \
 --insecure  
 ```         
 
-### Sentiment Analysis
+- Sentiment Analysis
+
+[distilbert/distilbert-base-uncased-finetuned-sst-2-english ](https://huggingface.co/distilbert/distilbert-base-uncased-finetuned-sst-2-english)
 ```shell
 model_id="distilbert/distilbert-base-uncased-finetuned-sst-2-english"
 task_type="text_classification"
@@ -42,13 +44,11 @@ eland_import_hub_model \
 ```
 
 3. Start the models.
+ 
 From the DEV console run the commands documented in
 [deploy_model.console](./kibana_console/deploy_model.console)
 
-Check deployed models:
-```shell
-GET _ml/trained_models/_all/_stats?filter_path=**.model_id,**.deployment_id&format=yaml
-```
+
 Start a model
 ```shell
 # typeform__distilbert-base-uncased-mnli
@@ -62,19 +62,24 @@ POST _ml/trained_models/distilbert__distilbert-base-uncased-finetuned-sst-2-engl
   }
 }
 ```
+If the method above does not work then try the UI Method.
 
-Navigate to Kibana Analytics Menu->Machine Learning https://192.168.49.2:30885/app/ml/overview
+- Navigate to Kibana Analytics Menu->Machine Learning https://192.168.49.2:30885/app/ml/overview
+- Then go to Trained Models.
+- Select Deploy option on right
+- Select advanced configuration and uncheck the "Adaptive resources"
 
-Then go to Trained Models.
-Go to our 
+#### Kibana Dev Console Operatins 
 
-# Check available models
+Check available models
 ```shell
 GET _cat/ml/trained_models?v
-#
-#id                                               heap_size operations create_time              type       ingest.pipelines data_frame.id
-#lang_ident_model_1                               1mb       39629      2019-12-05T12:28:34.594Z lang_ident 0                __none__
-#sentence-transformers__msmarco-minilm-l12-cos-v5 0b        0          2025-02-22T19:25:58.863Z pytorch    0                __none__
+#id                                                          heap_size operations create_time              type       ingest.pipelines data_frame.id
+#cross-encoder__nli-roberta-base                             0b        0          2025-02-23T01:09:15.277Z pytorch    0                __none__
+#distilbert__distilbert-base-uncased-finetuned-sst-2-english 0b        0          2025-02-24T15:52:45.347Z pytorch    1                __none__
+#lang_ident_model_1                                          1mb       39629      2019-12-05T12:28:34.594Z lang_ident 0                __none__
+#sentence-transformers__msmarco-minilm-l12-cos-v5            0b        0          2025-02-22T19:25:58.863Z pytorch    0                __none__
+#typeform__distilbert-base-uncased-mnli                      0b        0          2025-02-23T01:15:46.731Z pytorch    1                __none__
 ```
 Or this one 
 ```shell
@@ -91,32 +96,44 @@ POST _ml/trained_models/sentence-transformers__msmarco-minilm-l12-cos-v5/deploym
 
 ### Test deployed Models
 ```shell
-POST _ml/trained_models/sentence-transformers__msmarco-minilm-l12-cos-v5/_infer
+POST _ml/trained_models/typeform__distilbert-base-uncased-mnli/_infer
 {
-  "docs": {
-    "text_field": "How is the wheather in Jamaica?"
+  "docs": [
+    {
+      "text_field": "The food variations are great and the prices are absolutely fair."
+    }, 
+    {
+      "text_field": "Unfortunately, you have to expect some waiting time and get a note with a waiting number if it should be very full."
+    }
+  ],
+  "inference_config": {
+    "zero_shot_classification": {
+      "labels": [
+        "Service",
+        "Food",
+        "Venue",
+        "Wait",
+        "Price"
+      ]
+    }
   }
 }
 ```
-# Other models
-```shell
-eland_import_hub_model \
---url es_url \
--u elastic -p $es_pass \
---hub-model-id BAAI/bge-large-en-v1.5 \
---task-type text_embedding \
---insecure
 
-eland_import_hub_model \
---url es_url \
--u elastic -p $es_pass \
---hub-model-id BAAI/bge-large-en-v1.5 \
---task-type text_embedding \
---insecure \
---quantize \
---es-model-id baai__bge-large-en-v1.5_quantized 
+Sentiment Test
+```shell
+POST _ml/trained_models/distilbert__distilbert-base-uncased-finetuned-sst-2-english/_infer
+{
+  "docs": [
+     {
+      "text_field": "The food variations are great and the prices are absolutely fair."
+    }, 
+    {
+      "text_field": "Unfortunately, you have to expect some waiting time and get a note with a waiting number if it should be very full."
+    }
+  ]
+}
 ```
- 
 ### Note on eland
 Supports the following `--task-type` 
 - ner
