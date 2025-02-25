@@ -77,6 +77,7 @@ POST _ingest/pipeline/text-classification/_simulate
 
 ### Reindex using the pipeline
 
+```shell
 POST _reindex?wait_for_completion=false
 {
   "source": {
@@ -93,3 +94,4 @@ POST _reindex?wait_for_completion=false
     "pipeline": "text-classification"
   }
 }
+```

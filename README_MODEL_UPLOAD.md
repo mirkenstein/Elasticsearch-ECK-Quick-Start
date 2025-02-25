@@ -8,7 +8,7 @@ es_pass=$(kubectl get secret quickstart-es-elastic-user -o go-template='{{.data.
 
 2. Eland Import Models
 
-3. We will use the eland client utility from elastic to load models into our cluster.
+We will use the eland client utility from elastic to load models into our cluster.
 https://www.elastic.co/guide/en/machine-learning/current/ml-nlp-import-model.html
 
 

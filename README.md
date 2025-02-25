@@ -53,7 +53,7 @@ The ECK operator runs in the  `elastic-system` namespace.
 We will deploy our cluster in the `elk` namespace
 2. Setup prerequisites for the ELK cluster
             
-Set your elasticsearch password in advance, Start the trial and  
+Set your elasticsearch password in advance, Start the trial and add the S3 bucket credentials which will be used for snapshots. 
 
 
 - ES User pass
@@ -69,7 +69,7 @@ kubectl create secret generic minio-credentials \
 --from-literal=s3.client.default.secret_key=$S3_SECRET_KEY
 ```
 
-
+To retrieve elasticsearch password
 ```shell
 kubectl get secret quickstart-es-elastic-user -o go-template='{{.data.elastic | base64decode }}'
 ```
@@ -114,3 +114,10 @@ minikube service  quickstart-es-http  --url --namespace elk
 ``` 
 
 
+### Next
+
+[README_MODEL_UPLOAD.md](README_MODEL_UPLOAD.md)
+
+and after that 
+
+[README_INF_PIPELINE.md](README_INF_PIPELINE.md)
