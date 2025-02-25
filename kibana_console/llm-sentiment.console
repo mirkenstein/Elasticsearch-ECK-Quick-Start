@@ -1,0 +1,101 @@
+# Open AI Inference endpoint 
+#Open AI
+# --------------------------------------
+GET _inference
+PUT _inference/text_embedding/openai-embeddings
+{
+    "service": "openai",
+    "service_settings": {
+        "api_key": "${OPEN_AI_API_KEY}",
+        "model_id": "text-embedding-ada-002"
+    }
+}
+
+# Note For Hugging Face
+PUT _inference/text_embedding/hugging-face-embeddings
+{
+  "service": "hugging_face",
+  "service_settings": {
+    "api_key": """${hf_token}""",
+    "url": "http://"${inference_ip}":8081/embed"
+  }
+}
+ PUT _inference/completion/openai-completion-gpt-3.5-turbo
+{
+    "service": "openai",
+    "service_settings": {
+        "api_key": "${OPEN_AI_API_KEY}",
+        "model_id": "gpt-3.5-turbo"
+    }
+}
+# Test Embeddings
+POST _inference/text_embedding/openai-embeddings
+{
+  "input": "The sky above the port was the color of television tuned to a dead channel."
+}
+
+POST _inference/completion/openai-completion-gpt-3.5-turbo
+{
+  "input": "Tell me a joke?"
+}
+
+# Create pipeline with LLM Proccessor
+ 
+PUT _ingest/pipeline/llm-classification
+{
+  "description": "LLM Text Topic and Sentiment pipeline",
+  "processors": [
+    {
+      "script": {
+        "source": "ctx.prompt = 'Please categorize the following text into one of these categories  (Support,Interface,Experience,Utility, SignupLogin) and provide sentiment for each if applicable. Output JSON keys shoulb be  category name and value the sentiment value . : ' + ctx.text"
+      }
+    },
+    {
+      "inference": {
+        "model_id": "openai-completion-gpt-3.5-turbo",
+        "input_output": {
+          "input_field": "prompt",
+          "output_field": "summary"
+        }
+      }
+    },
+    {
+      "remove": {
+        "field": "prompt"
+      }
+    },
+    {
+      "json": {
+        "field": "summary",
+        "target_field": "json_target"
+      }
+    }
+  ],
+  "on_failure": [
+    {
+      "set": {
+        "description": "Index document to 'failed-<index>'",
+        "field": "_index",
+        "value": "failed-{{{_index}}}"
+      }
+    },
+    {
+      "set": {
+        "description": "Set error message",
+        "field": "ingest.failure",
+        "value": "{{_ingest.on_failure_message}}"
+      }
+    }
+  ]
+}
+
+POST _ingest/pipeline/llm-classification/_simulate
+{
+  "docs": [
+    {
+      "_source": {
+        "text":  "Great app with a lot of usefull features. Can't login. No one helped me resolve the login issue"
+      }
+    }
+  ]
+}

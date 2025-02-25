@@ -1,3 +1,27 @@
+# Usefull Kibana Console Files
+
+Hugging Face Model Deployment. 
+[deploy_model.console](./kibana_console/deploy_model.console)
+
+Pipeline using the deployed models for topic and sentiment analysis.
+[bert-sentiment.console](kibana_console/bert-sentiment.console)
+
+
+OpenAI Inference Completion Pipeline with the test
+[llm-sentiment.console](kibana_console/llm-sentiment.console)
+
+For local deployment the inference endpoint will look like this:
+```shell
+ PUT _inference/completion/openai-completion-local
+{
+    "service": "openai",
+    "service_settings": {
+        "api_key": "${OPEN_AI_API_KEY}",
+        "model_id": "LLAMA ID"
+        "url":"${MY_LOCAL_IP_GENERATE}"
+    }
+}
+```
 # Local Cluster Setup
 
 We will be deploying a 3 node ECK on a local minikibe cluster.
