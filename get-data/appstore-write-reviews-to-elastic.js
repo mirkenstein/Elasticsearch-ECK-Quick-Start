@@ -2,12 +2,13 @@
 
 
 var store = require('app-store-scraper');
-
+require('dotenv').config();
 require('array.prototype.flatmap').shim()
 const { Client } = require('@elastic/elasticsearch')
+const node = process.env.ELASTICSEARCH_NODE
 const client = new Client({
     // node: 'http://localhost:9200'
-    node: 'https://elastic:xxxx@192.168.49.2:32357',
+    node: node,
     tls: {
         // ca: process.env.elasticsearch_certificate,
         rejectUnauthorized: false, // <-- this is important
@@ -83,9 +84,9 @@ async function run (dataset) {
     }, { ignore: [400] })
 
 
-    const body = dataset.flatMap(doc => [{ index: { _index: 'app-store-search' ,_id: doc.id} }, doc])
+    const body = dataset.flatMap(doc => [{ index: { _index: index_name ,_id: doc.id} }, doc])
 
-    const bulkResponse  = await client.bulk({ refresh: true, body })
+    const bulkResponse  = await client.bulk({ refresh: true,pipeline:'llm-classification', body })
 
     if (bulkResponse.errors) {
         console.log('errors')
@@ -111,21 +112,42 @@ async function run (dataset) {
     }
 
     const { body: count } = await client.count({ index: index_name })
-    console.log(count)
+    console.log('index name '+index_name)
 }
 
-store.reviews({
-    id: '1463423283',
-    sort: store.sort.RECENT,
-    num: 200,
-    page: 5
-}).then(value => {
-    console.log("Number of reviews:"+value.length)
-    // var jsonData=JSON.stringify(value,null,2);
-    run(value).catch(console.log)
-    // console.log(value)
-});
+// store.reviews({
+//     id: '1463423283',
+//     sort: store.sort.RECENT,
+//     num: 200,
+//     page: 1
+// }).then(value => {
+//     console.log("Number of reviews:"+value.length)
+//     // var jsonData=JSON.stringify(value,null,2);
+//     run(value).catch(console.log)
+//  });
 
+let page = 1;
+let hasNextPage = true;
+
+async function fetchReviews() {
+    while(hasNextPage  && page <= 10) {
+        const value = await store.reviews({
+            id: '1463423283',
+            sort: store.sort.HELPFUL,
+            num: 200,
+            page: page
+        });
+
+        if(value.length >0) {
+            console.log("Number of reviews on page "+ page +": "+ value.length);
+            await run(value);
+            page++;
+        } else {
+            hasNextPage = false;
+        }
+    }
+}
+fetchReviews().catch(console.log);
 // store.list({
 //     collection: store.collection.NEW_FREE_IOS,
 //     category: store.category.MEDICAL,
