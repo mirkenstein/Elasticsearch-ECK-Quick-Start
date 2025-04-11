@@ -2,15 +2,16 @@ apiVersion: kibana.k8s.elastic.co/v1
 kind: Kibana
 metadata:
   name: quickstart
+  namespace: elk
 spec:
-  version: 8.17.2
+  version: 8.17.3
   http:
     service:
       spec:
         type: NodePort
         ports:
           - name: https
-            nodePort: 30885
+            nodePort: 30601
             port: 5601
             protocol: TCP
             targetPort: 5601
@@ -22,8 +23,9 @@ spec:
   #  confid:
   #    enterpriseSearch:
   #      host: 'https://enterprise-search-quickstart-ent-http.elk.svc:3002'
+  # Set the IP to your minikube node Ip from `minikube profile list
   config:
-    server.publicBaseUrl: "https://192.168.49.2:30885/"
+    server.publicBaseUrl: "https://192.168.58.2:30601/"
   monitoring:
     metrics:
       elasticsearchRefs:

@@ -1,0 +1,73 @@
+# Elasticsearch Kubernetes Configuration
+apiVersion: elasticsearch.k8s.elastic.co/v1
+kind: Elasticsearch
+metadata:
+  name: quickstart
+
+spec:
+  # Core Configuration
+  version: 8.17.2
+  secureSettings:
+    - secretName: minio-credentials
+
+  # Network Configuration
+  http:
+    service:
+      spec:
+        type: NodePort
+
+  # Node Configuration
+  nodeSets:
+    - name: data-ml-nodes  # Renamed for clarity
+      count: 3
+      config: { }  # Empty config instead of commented-out values
+
+      # Pod Configuration
+      podTemplate:
+        spec:
+          # System Preparation
+          initContainers:
+            - name: sysctl
+              securityContext:
+                privileged: true
+                runAsUser: 0
+              command: [ 'sh', '-c', 'sysctl -w vm.max_map_count=262144' ]
+
+          # Main Container
+          containers:
+            - name: elasticsearch
+              resources:
+                requests:
+                  memory: 4Gi
+                  cpu: 2
+                limits:
+                  memory: 4Gi
+
+      # Storage Configuration
+      volumeClaimTemplates:
+        - metadata:
+            name: elasticsearch-data  # Important: Name is referenced by ES
+          spec:
+            accessModes:
+              - ReadWriteOnce
+            resources:
+              requests:
+                storage: 6Gi
+            storageClassName: standard
+
+  # Monitoring Configuration
+  monitoring:
+    metrics:
+      elasticsearchRefs:
+        - name: quickstart
+    logs:
+      elasticsearchRefs:
+        - name: quickstart
+
+# Disabled Settings - Uncomment as needed
+# ---
+# spec:
+#   nodeSets:
+#     - config:
+#         bootstrap.memory_lock: true
+#         node.store.allow_mmap: false

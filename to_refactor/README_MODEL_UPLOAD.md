@@ -46,7 +46,7 @@ eland_import_hub_model \
 3. Start the models.
  
 From the DEV console run the commands documented in
-[deploy_model.console](./kibana_console/deploy_model.console)
+[deploy_model.console](kibana_console/deploy_model.console)
 
 
 Start a model

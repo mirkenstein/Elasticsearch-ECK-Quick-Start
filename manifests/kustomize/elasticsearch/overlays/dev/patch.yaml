@@ -1,0 +1,44 @@
+# Development environment patch
+apiVersion: elasticsearch.k8s.elastic.co/v1
+kind: Elasticsearch
+metadata:
+  name: quickstart
+spec:
+  # Core Configuration
+  version: 8.17.3
+  
+  # Node Configuration
+  nodeSets:
+    - name: data-ml-nodes
+      count: 3  # Reduced count for dev
+      
+      # Main Container
+      podTemplate:
+        spec:
+          initContainers:
+            - name: sysctl
+              securityContext:
+                privileged: true
+                runAsUser: 0
+              command: [ 'sh', '-c', 'sysctl -w vm.max_map_count=262144' ]
+          containers:
+            - name: elasticsearch
+              resources:
+                requests:
+                  memory: 2Gi  # Reduced memory for dev
+                  cpu: 2       # Reduced CPU for dev
+                limits:
+                  memory: 2Gi  # Reduced memory limit for dev
+
+      # Storage Configuration
+      volumeClaimTemplates:
+        - metadata:
+            name: elasticsearch-data
+          spec:
+            # Preserve these important fields from the base
+            accessModes:
+              - ReadWriteOnce
+            storageClassName: standard
+            resources:
+              requests:
+                storage: 2Gi  # Reduced storage for dev
