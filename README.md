@@ -128,3 +128,79 @@ For local deployment the inference endpoint will look like this:
     }
 }
 ```
+Google AI Services 
+```shell
+PUT _inference/completion/google_ai_studio_completion
+{
+    "service": "googleaistudio",
+    "service_settings": {
+        "api_key": "${GEMINI_API_KEY}",
+        "model_id": "gemini-2.0-flash"
+    }
+}
+```
+
+### Create Inference Pipeline
+```shell
+PUT _ingest/pipeline/llm-classification
+{
+  "description": "LLM Text Topic and Sentiment pipeline",
+  "processors": [
+    {
+      "script": {
+        "source": "ctx.prompt = 'Please categorize the following text into one of these categories  (Support,Search,Experience,Utility, Signup Login) and provide numerical sentiment for each if applicable. Output JSON keys should be  category name and value the sentiment value . : ' + ctx.text"
+      }
+    },
+    {
+      "inference": {
+        "model_id": "google_ai_studio_completion",
+        "input_output": {
+          "input_field": "prompt",
+          "output_field": "summary"
+        }
+      }
+    },
+    {
+      "remove": {
+        "field": "prompt"
+      }
+    },
+    {
+      "json": {
+        "field": "summary",
+        "target_field": "json_target"
+      }
+    }
+  ],
+  "on_failure": [
+    {
+      "set": {
+        "description": "Index document to 'failed-<index>'",
+        "field": "_index",
+        "value": "failed-{{{_index}}}"
+      }
+    },
+    {
+      "set": {
+        "description": "Set error message",
+        "field": "ingest.failure",
+        "value": "{{_ingest.on_failure_message}}"
+      }
+    }
+  ]
+}
+
+```
+Test the pipeline
+```shell
+POST _ingest/pipeline/llm-classification/_simulate
+{
+  "docs": [
+    {
+      "_source": {
+        "text":  "Great app with a lot of usefull features. Can't login. No one helped me resolve the login issue"
+      }
+    }
+  ]
+}
+```
