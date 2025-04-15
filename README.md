@@ -128,8 +128,25 @@ For local deployment the inference endpoint will look like this:
     }
 }
 ```
-Google AI Services 
+Google AI Services  and other Inference Integrations.
 ```shell
+PUT _inference/completion/openai-completion-gpt-4o-mini
+{
+    "service": "openai",
+    "service_settings": {
+        "api_key": "${OPEN_AI_API_KEY}",
+        "model_id": "gpt-4o-mini"
+    }
+}
+PUT _inference/completion/openai-completion-gpt-3.5-turbo
+{
+    "service": "openai",
+    "service_settings": {
+        "api_key": "${OPEN_AI_API_KEY}",
+        "model_id": "gpt-3.5-turbo"
+    }
+}
+DELETE _inference/completion/google_ai_studio_completion
 PUT _inference/completion/google_ai_studio_completion
 {
     "service": "googleaistudio",
@@ -138,22 +155,29 @@ PUT _inference/completion/google_ai_studio_completion
         "model_id": "gemini-2.0-flash"
     }
 }
+
+POST _inference/completion/google_ai_studio_completion
+{
+  "input": "What is Elastic?"
+}
 ```
 
 ### Create Inference Pipeline
-```shell
+We use `gpt4o-mini`
+```shell 
 PUT _ingest/pipeline/llm-classification
 {
   "description": "LLM Text Topic and Sentiment pipeline",
   "processors": [
     {
       "script": {
-        "source": "ctx.prompt = 'Please categorize the following text into one of these categories  (Support,Search,Experience,Utility, Signup Login) and provide numerical sentiment for each if applicable. Output JSON keys should be  category name and value the sentiment value . : ' + ctx.text"
+        "source": "ctx.prompt = 'Please categorize the following text into one of these comma separated single word categories with expanded definition in parenthesis:  UX (App Functionality, App User experience,App usability),UI (User Interface),Reliability (Technical Issues, Performance & Reliability),Login (Login, Sign Up and Account Issues),  Support (Customer Service and Support), Fees(Baggage Policy and Fees), Check-in(Check-in process and or Boarding Process), Service (Flight Experience),Payment (Payment And Billing Issues), Overall ( General sentiment for the entire text).  Provide numeric sentiment score for each if applicable. Output valid JSON string. Keys shoud be single word category and value the sentiment value. If not categories applies do not return that key. Respond with no Markdown, no asterisks, no backticks, and no special formatting—just plain text. If sentiment cannot be determined then provide a simple empty json string. Do not provide any explanation. Return only a valid json : ' + ctx.content"
       }
     },
     {
       "inference": {
-        "model_id": "google_ai_studio_completion",
+   "model_id": "openai-completion-gpt-4o-mini",
+          // "model_id": "google_ai_studio_completion",
         "input_output": {
           "input_field": "prompt",
           "output_field": "summary"
@@ -161,14 +185,17 @@ PUT _ingest/pipeline/llm-classification
       }
     },
     {
-      "remove": {
-        "field": "prompt"
-      }
-    },
-    {
       "json": {
         "field": "summary",
         "target_field": "json_target"
+      }
+    },
+    {
+      "remove": {
+        "field": [
+          "prompt",
+          "summary"
+        ]
       }
     }
   ],
@@ -203,4 +230,16 @@ POST _ingest/pipeline/llm-classification/_simulate
     }
   ]
 }
+```
+
+Run few  ETLs for airlines google play store apps
+using this node script
+https://github.com/mirkenstein/bolt-gplay-scraper.git 
+
+```shell
+npm run google com.delta.mobile.android
+npm run google com.aa.android
+npm run google com.united.mobile.android
+npm run google com.southwestairlines.mobile
+
 ```
