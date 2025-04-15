@@ -123,11 +123,12 @@ For local deployment the inference endpoint will look like this:
     "service": "openai",
     "service_settings": {
         "api_key": "${OPEN_AI_API_KEY}",
-        "model_id": "LLAMA ID"
-        "url":"${MY_LOCAL_IP_GENERATE}"
+        "model_id": " LLAMA ID"
+        "url":"${MY_LOCAL_OPEN_AI_COMLPETION_URL}"
     }
 }
 ```
+Example  MY_LOCAL_OPEN_AI_COMLPETION_URL value "http://10.1.1.5:8080/v1/chat/completions"
 Google AI Services  and other Inference Integrations.
 ```shell
 PUT _inference/completion/openai-completion-gpt-4o-mini
