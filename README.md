@@ -59,10 +59,10 @@ kubectl create secret generic minio-credentials \
 ```
 
 To retrieve the elasticsearch password from running cluster you can use this 
-
 ```shell
 kubectl get secret quickstart-es-elastic-user -o go-template='{{.data.elastic | base64decode }}'
 ```
+hu61Hh41Gc8t5r0xK3F22VxE
 ###  Create Elastic-Kibana Cluster
 From inside the [manifests/](manifests) directory.
 
